@@ -1,0 +1,272 @@
+<html>
+
+<canvas id="gameCanvas" width="800" height="600"></canvas>
+
+<script type="text/javascript">
+	var canvas;
+	var canvasContext;
+	var ballX = 400;
+	var ballY = 300;
+	var ballSpeedX = -3;
+	var ballSpeedY = 0;
+	var start = 0;
+	var ballRadius = 10;
+
+	var level = 1;
+	var aiReaction = 2;
+	var paddleHeight2 = 100;
+	var paddleHeight1 = 100;
+	var paddle2Color = 'white';
+
+	var speedFactor = 0.2;
+
+	var paddle1Y = 250;
+	var paddle2Y = 250;
+	const PADDLE_HEIGHT = 100;
+	const PADDLE_THICKNESS = 10;
+
+	var player1Score = 0;
+	var player2Score = 0;
+	const WINNING_SCORE = 3;
+
+	var showingWinScreen = false;
+	var startScreen = true;
+
+	var xRand = 10;
+        var yRand = 10;
+
+	function calculateMousePos(evt){
+		var rect = canvas.getBoundingClientRect();
+		var root = document.documentElement;
+		var mouseX = evt.clientX - rect.left - root.scrollLeft;
+		var mouseY = evt.clientY - rect.top - root.scrollTop;
+		return {
+			x:mouseX,
+			y:mouseY
+		}
+	}
+
+	function handleMouseClick(evt) {
+		if(showingWinScreen){
+			player1Score = 0;
+			player2Score = 0;
+			showingWinScreen = false;
+		}
+	}
+
+	window.onload = function(){
+		//console.log("Hello, World!");
+		canvas = document.getElementById('gameCanvas');
+		canvasContext = canvas.getContext('2d');
+
+		var framesPerSecond = 60;
+		setInterval(function(){
+			moveEverything();
+			drawEverything();}, 1000/framesPerSecond);
+
+		canvas.addEventListener('mousedown', handleMouseClick);
+
+		canvas.addEventListener('mousemove',
+			function(evt) {
+				var mousePos = calculateMousePos(evt);
+				paddle1Y = mousePos.y - paddleHeight1/2;
+			})
+		}
+
+	function ballReset() {
+		if(player1Score >= WINNING_SCORE ||
+			player2Score >= WINNING_SCORE) {
+			showingWinScreen = true;
+
+			if(player1Score >= WINNING_SCORE){
+				level += 1;
+			}
+
+			if(level == 1 || level == 2 || level == 3){
+				aiReaction = 2+level;
+				ballSpeedX = 3 + level;
+				ballSpeedY = 0;
+			}
+			else if(level == 4 || level == 5 || level == 6){
+				paddle2Color = 'blue';
+				ballSpeedY = 2;
+				ballSpeedX = 7;
+				paddleHeight2 = PADDLE_HEIGHT + level*5;
+				yRand = -20;
+			}
+			else if(level == 7 || level == 8 || level == 9){
+				paddle2Color = 'green';
+				aiReaction = 6;
+				ballSpeedX = 10;
+				ballSpeedY = -2;
+				paddleHeight1 = PADDLE_HEIGHT - (level-6)*10;
+				xRand = -20;
+			}
+			else if(level == 10 || level == 11 || level == 12){
+				aiReaction = 9;
+				paddle2Color = 'red';
+				ballSpeedX = 13;
+				ballSpeedY = -3;
+				paddleHeight2 = 140;
+				speedFactor = 0.32;
+				xRand = 25;
+				yRand = 25; 
+			}
+			else if(level > 12){
+				paddleHeight1 = 50 - (level - 13);
+				paddle2Color = 'yellow';
+				aiReaction = 14 + level - 13 ;
+				ballSpeedX = 15 + level - 13;
+				speedFactor = 0.5 + (level - 13)*0.02;
+				yRand = 30;
+			}
+		}
+
+		ballSpeedX = -ballSpeedX;
+		ballX = canvas.width/2;
+		ballY = canvas.height/2;
+	}
+
+	function computerMovement() {
+		var paddle2YCenter = paddle2Y + paddleHeight2/2;
+		if(paddle2YCenter < ballY-35) {
+			paddle2Y += aiReaction;
+		}
+		else if(paddle2YCenter > ballY+35) {
+			paddle2Y -= aiReaction;
+		}
+	}
+
+	function moveEverything() {
+		if(showingWinScreen) {
+			canvasContext.fillText("Click to continue!", 350, 500);
+			return;
+		}
+		if(startScreen){
+			canvasContext.fillText("Welcome to Tennis Souls!", 350, 200);
+			canvasContext.fillText("A QuantumSuperGame Production.", 350, 300);
+			startScreen = false;
+			canvasContext.fillText("Click to continue!", 350, 500);
+			return;
+		}
+		computerMovement();
+		ballX += ballSpeedX;
+		ballY += ballSpeedY;
+		
+		if(Math.random()<0.1 && ballX>50 && ballX<750 && ballY>50 && ballY<550){
+			ballX += Math.random()*xRand;
+			ballY += Math.random()*yRand;
+		}
+		//if(Math.random()>0.99 && ballX>50 && ballX<750 && ballY>50 && ballY<550){
+		//	ballY += 20;
+		//}
+		//if(0.98<Math.random()<0.99 && ballX>50 && ballX<750 && ballY>50 && ballY<550){
+		//	ballY -= 20;
+		//}
+		//if(0.50000<Math.random()>0.50001 && ballX>50 && ballX<750 && ballY>50 && ballY<550){
+		//	ballSpeedX = -ballSpeedX;
+		//}
+
+		if(ballX >= canvas.width) {
+			//ballSpeedX = -ballSpeedX;
+			if(ballY > paddle2Y &&
+				ballY < paddle2Y+paddleHeight2){
+				ballSpeedX = -ballSpeedX;
+
+				var deltaY = ballY
+					-(paddle2Y+paddleHeight2/2);
+				
+				ballSpeedY = deltaY * speedFactor //0.2
+			}
+			else {
+				// must be BEFORE ballReset()
+				player1Score++;
+				ballReset();
+			}
+		}
+		if(ballX <= start) {
+			//ballSpeedX = -ballSpeedX;
+			if(ballY > paddle1Y - ballRadius &&
+				ballY < paddle1Y+paddleHeight1 + ballRadius){
+				ballSpeedX = -ballSpeedX;
+				
+				var deltaY = ballY
+					-(paddle1Y+paddleHeight1/2);
+				ballSpeedY = deltaY * speedFactor//0.2
+			}
+			else {
+				// must be BEFORE ballReset()
+				player2Score++; 
+				ballReset();
+			}
+
+		}
+		if(ballY <= start) {
+			ballSpeedY = -ballSpeedY;
+		}
+		if(ballY >= canvas.height) {
+			ballSpeedY = -ballSpeedY;
+		}
+	}
+
+	function drawNet() {
+		for(var i=0; i<canvas.height; i+=40) {
+			colorRect(canvas.width/2 - 1, i, 2, 20, 'white')
+		}
+	}
+
+	function drawEverything() {
+		// Color and width of playground
+		colorRect(0,0, canvas.width, canvas.height, 'black');
+		if(showingWinScreen) {
+			canvasContext.fillStyle = "yellow";
+
+			if(player1Score>= WINNING_SCORE){
+				canvasContext.fillText("Left Player Won!", 350, 200);
+				canvasContext.fillText("Level "+level, 350, 300);
+			}
+			if(player2Score>= WINNING_SCORE){
+				canvasContext.fillText("Right Player Won!", 350, 200);
+			}
+			if (level == 13) {
+				canvasContext.fillText("Final Boss!!!", 350, 400);
+			}
+			if (level == 14) {
+				canvasContext.fillText("Congrats, you beat the game!", 350, 400);
+			}
+
+			canvasContext.fillText("Click to continue!", 350, 500);
+			return;
+		}
+
+
+		drawNet();
+		// Position and color of player blocker
+		colorRect(0, paddle1Y, PADDLE_THICKNESS, paddleHeight1, 'white');
+		// Position and color of AI blocker
+		colorRect(canvas.width-PADDLE_THICKNESS, paddle2Y, PADDLE_THICKNESS, paddleHeight2, paddle2Color);
+		// Position and color ball
+		colorCircle(ballX, ballY, ballRadius, 'red');
+
+		canvasContext.fillStyle = "yellow";
+		canvasContext.fillText("Level "+level, 400, 10);
+		canvasContext.fillText(player1Score, 100, 10);
+		canvasContext.fillText(player2Score, canvas.width-100, 10);
+
+		canvasContext.fillText("Tennis Souls - A QuantumSuperGame Production.", 300, 590)
+	}
+
+	function colorCircle(centerX, centerY, radius, drawColor) {
+		canvasContext.fillStyle = drawColor;
+		canvasContext.beginPath();
+		canvasContext.arc(centerX, centerY, radius, 0, Math.PI*2, true);
+		canvasContext.fill();
+	}
+
+	function colorRect(leftX, topY, width, height, drawColor) {
+		canvasContext.fillStyle = drawColor;
+		canvasContext.fillRect(leftX, topY, width, height);
+	}
+</script>
+
+</html>
